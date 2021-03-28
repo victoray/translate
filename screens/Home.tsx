@@ -1,6 +1,12 @@
 import * as React from "react";
 import { FC, useCallback, useEffect, useState } from "react";
-import { Keyboard, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  Keyboard,
+  Route,
+  StyleSheet,
+  TouchableOpacity,
+  unstable_batchedUpdates,
+} from "react-native";
 import { Text, View } from "../components/Themed";
 import styled from "styled-components/native";
 import HistoryList from "../components/HistoryList";
@@ -66,27 +72,27 @@ const Button: FC<TouchableOpacity["props"]> = ({ children, ...props }) => {
   );
 };
 
-const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
-  const [translations, setTranslations] = useState<Translation[]>([]);
+const Home: FC<{ navigation: StackNavigationProp<any>; route: Route }> = ({
+  route,
+}) => {
   const [targetLanguage, setTargetLanguage] = useState("et");
   const [domain, setDomain] = useState<Domain>("auto");
   const [result, setResult] = useState("");
   const [value, setValue] = useState("");
 
   const currentUser = useAuthentication();
+  const { from, to, target, domain: domain_ } = route.params || {};
 
-  const fetchTranslations = () => {
-    if (currentUser) {
-      firestore.getItem(currentUser?.uid).then((querySnapshot) => {
-        const translations_: Translation[] = [];
-        querySnapshot.forEach((doc) => {
-          translations_.push(doc.data() as Translation);
-        });
-
-        setTranslations(translations_);
+  useEffect(() => {
+    if ([from, to, target, domain_].every((v) => v)) {
+      unstable_batchedUpdates(() => {
+        setTargetLanguage(target);
+        setDomain(domain_);
+        setResult(to);
+        setValue(from);
       });
     }
-  };
+  }, [from, to, target, domain_]);
 
   const translateText = (
     text_ = result,
@@ -97,49 +103,38 @@ const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
       return;
     }
 
-    translate({ text: text_, tgt: target, domain: domain_ }).then(
-      (response) => {
+    translate({ text: text_, tgt: target, domain: domain_ })
+      .then((response) => {
         setResult(response.result);
         if (currentUser) {
           const translation_: Translation = {
             id: uuidv4(),
             from: text_,
             to: response.result,
+            target,
+            domain,
             favorite: false,
             timestamp: dayjs().unix(),
             userId: currentUser?.uid,
           };
 
-          firestore.saveItem(translation_).then(() => {
-            setTranslations((state) => [translation_, ...state]);
-          });
+          firestore.saveItem(translation_);
         }
-      }
-    );
+      })
+      .catch(console.log);
   };
 
   const debouncedTranslateText = useCallback(debounce(translateText, 750), []);
 
   const handleTargetChange = (target_: string) => {
     setTargetLanguage(target_);
-    translateText(result, target_);
+    debouncedTranslateText(value, target_);
   };
 
-  useEffect(() => {
-    fetchTranslations();
-  }, []);
-
-  useEffect(() => {
-    const onFocus = () => {
-      fetchTranslations();
-    };
-
-    navigation.addListener("focus", onFocus);
-
-    return () => {
-      navigation.removeListener("focus", onFocus);
-    };
-  }, [currentUser]);
+  const handleDomainChange = (domain_: Domain) => {
+    setDomain(domain_);
+    debouncedTranslateText(value, target, domain_);
+  };
 
   const textStyle = { color: "white", fontWeight: "500" } as const;
   const pickerStyle = { inputIOS: textStyle, inputAndroid: textStyle } as const;
@@ -187,7 +182,7 @@ const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
 
         <Button>
           <RNPickerSelect
-            onValueChange={setDomain}
+            onValueChange={handleDomainChange}
             style={pickerStyle}
             value={domain}
             placeholder={{}}
@@ -201,7 +196,6 @@ const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
       </StyledSection>
 
       <HistoryList
-        translations={translations}
         onSelect={(translation) => {
           setResult(translation.to);
           setValue(translation.from);

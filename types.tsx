@@ -21,6 +21,8 @@ export type Translation = {
   from: string;
   to: string;
   favorite: boolean;
+  target: string;
+  domain: Domain;
   timestamp: number;
   userId: string;
 };

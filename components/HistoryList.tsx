@@ -1,7 +1,12 @@
-import React, { FC } from "react";
+import React, { FC, useEffect, useState } from "react";
 import { FlatList, StyleSheet } from "react-native";
 import styled from "styled-components/native";
 import { Translation } from "../types";
+import { AntDesign } from "@expo/vector-icons";
+import { View } from "./Themed";
+import firebase from "firebase";
+import { FIREBASE_APP, HISTORY_COLLECTION } from "../constants/Firebase";
+import useAuthentication from "../hooks/useAuthentication";
 
 const StyledView = styled.View`
   width: 100%;
@@ -29,6 +34,9 @@ const StyledContainer = styled.View`
 `;
 
 export const StyledHistoryItem = styled.TouchableOpacity`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
   padding: 8px;
   border: 1px solid #eee;
   border-left-width: 0;
@@ -48,9 +56,53 @@ const styles = StyleSheet.create({
 });
 
 const HistoryList: FC<{
-  translations: Translation[];
+  favorites?: boolean;
   onSelect(translation: Translation): void;
-}> = ({ translations, onSelect }) => {
+}> = ({ onSelect, favorites }) => {
+  const [translations, setTranslations] = useState<Translation[]>([]);
+
+  const currentUser = useAuthentication();
+  useEffect(() => {
+    const app = firebase.app(FIREBASE_APP);
+    let unsubscribe: () => void;
+
+    if (currentUser) {
+      let baseQuery = firebase
+        .firestore(app)
+        .collection(HISTORY_COLLECTION)
+        .where("userId", "==", currentUser.uid);
+
+      if (favorites) {
+        baseQuery = baseQuery.where("favorite", "==", true);
+      }
+
+      unsubscribe = baseQuery
+        .orderBy("timestamp", "desc")
+        .onSnapshot((querySnapshot) => {
+          const translations_: Translation[] = [];
+          querySnapshot.forEach((doc) => {
+            translations_.push({ ...doc.data(), id: doc.id } as Translation);
+          });
+          setTranslations(translations_);
+        });
+    }
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [currentUser, favorites]);
+
+  const onToggleFavorite = (translation: Translation) => {
+    const app = firebase.app(FIREBASE_APP);
+
+    firebase
+      .firestore(app)
+      .collection(HISTORY_COLLECTION)
+      .doc(translation.id)
+      .update({
+        favorite: !translation.favorite,
+      });
+  };
   return (
     <StyledView>
       <StyledContainer>
@@ -60,8 +112,16 @@ const HistoryList: FC<{
           data={translations}
           renderItem={({ item, index }) => (
             <StyledHistoryItem key={index} onPress={() => onSelect(item)}>
-              <StyledText numberOfLines={1}>{item.from}</StyledText>
-              <StyledText numberOfLines={1}>{item.to}</StyledText>
+              <View>
+                <StyledText numberOfLines={1}>{item.from}</StyledText>
+                <StyledText numberOfLines={1}>{item.to}</StyledText>
+              </View>
+              <AntDesign
+                name={item.favorite ? "star" : "staro"}
+                size={24}
+                color={item.favorite ? "gold" : "black"}
+                onPress={() => onToggleFavorite(item)}
+              />
             </StyledHistoryItem>
           )}
         />
