@@ -14,6 +14,13 @@ const StyledSection = styled.View`
   flex-direction: row;
 `;
 
+const StyledResult = styled.ScrollView`
+  display: flex;
+  border: 1px solid #eee;
+  max-height: 100px;
+  padding: 10px;
+`;
+
 const StyledButton = styled.TouchableOpacity`
   display: flex;
   align-items: center;
@@ -42,18 +49,9 @@ const Button: FC = ({ children }) => {
   );
 };
 
-const StyledText = styled.Text`
-  font-size: 15px;
-  font-weight: 500;
-  margin-left: 15px;
-`;
-
-const StyledView = styled.TouchableWithoutFeedback`
-  flex: 1;
-`;
-
 export default function Home() {
   const [showResult, setShowResult] = useState(false);
+
   return (
     <View style={styles.container} onTouchStart={Keyboard.dismiss}>
       <StyledSection>
@@ -70,16 +68,35 @@ export default function Home() {
         numberOfLines={5}
         onFocus={() => setShowResult(true)}
         onBlur={() => {
-          console.log("fff");
-          Keyboard.dismiss();
           setShowResult(false);
         }}
       />
 
       {showResult ? (
-        <StyledSection>
-          <Text>Translate</Text>
-        </StyledSection>
+        <StyledResult onTouchStart={(e) => e.stopPropagation()}>
+          <Text>
+            I came across a very interesting position on your jobs page and I
+            believe it fits me perfectly. I am interested in applying for the
+            position of Frontend Software Engineer. I believe my positive drive
+            to learn and passion for creative solutions will be a positive
+            addition to your team and organization’s goals. I enjoy innovation
+            and love to experiment with different ideas. I love coding and
+            numbers in general, I have cultivated a habit of learning through
+            practice and diverse experiences. I have a deep passion for new
+            advancements in technology. These talents, along with my passion in
+            this field, align with the qualities you desire in this position. I
+            think I will excel in a workplace that promotes a culture of fun,
+            consensus-driven, and high-energy teamwork. I have a good knowledge
+            of Python, Javascript, Java, React, TypeScript and SQL and I can
+            work efficiently with Unix systems and Windows.  I am highly
+            motivated by the prospects of learning and providing solutions on a
+            daily basis. I have an artistic eye and strong work ethic, but also
+            like to foster an element of fun. I strongly believe that my
+            creative talents will prove to be a valuable resource for your
+            organization. I look forward to an opportunity to grow with your
+            organization.
+          </Text>
+        </StyledResult>
       ) : (
         <HistoryList
           translations={[
