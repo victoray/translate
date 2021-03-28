@@ -15,3 +15,8 @@ export type HomeParamList = {
 export type FavoritesParamList = {
   FavoritesScreen: undefined;
 };
+
+export type Translation = {
+  from: string;
+  to: string;
+};
