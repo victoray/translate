@@ -19,6 +19,9 @@ export type FavoritesParamList = {
 export type Translation = {
   from: string;
   to: string;
+  favorite: boolean;
+  timestamp: number;
+  userId: string;
 };
 
 export type Domain = "auto" | "fml" | "inf";

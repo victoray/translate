@@ -1,14 +1,17 @@
 import * as React from "react";
-import { FlatList, Keyboard, Pressable, StyleSheet } from "react-native";
-import { AntDesign } from "@expo/vector-icons";
+import { FC, useEffect, useState } from "react";
+import { Keyboard, StyleSheet, TouchableOpacity } from "react-native";
 import { Text, View } from "../components/Themed";
 import styled from "styled-components/native";
-import { FC, useEffect, useState } from "react";
-import HistoryList, { StyledHistoryItem } from "../components/HistoryList";
+import HistoryList from "../components/HistoryList";
 import RNPickerSelect from "react-native-picker-select";
 import { debounce } from "lodash";
 import { translate } from "../api";
-import { Domain } from "../types";
+import { Domain, Translation } from "../types";
+import firestore from "../storage/firestore";
+import useAuthentication from "../hooks/useAuthentication";
+import { StackNavigationProp } from "@react-navigation/stack";
+import dayjs from "dayjs";
 
 const StyledSection = styled.View`
   display: flex;
@@ -16,6 +19,8 @@ const StyledSection = styled.View`
   height: 64px;
   width: 100%;
   flex-direction: row;
+  justify-content: space-between;
+  padding: 10px;
 `;
 
 const StyledResult = styled.ScrollView`
@@ -29,8 +34,9 @@ const StyledButton = styled.TouchableOpacity`
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 64px;
+  border-radius: 5px;
   flex: 1;
+  background-color: #1890ff;
 `;
 
 const StyledTextArea = styled.TextInput`
@@ -46,28 +52,59 @@ const StyledHistoryView = styled.View`
   background-color: #eee;
 `;
 
-const Button: FC = ({ children }) => {
+const Button: FC<TouchableOpacity["props"]> = ({ children, ...props }) => {
   return (
-    <StyledButton>
-      <Text>{children}</Text>
+    <StyledButton {...props}>
+      <Text style={{ color: "white" }}>{children}</Text>
     </StyledButton>
   );
 };
 
-export default function Home() {
-  const [showResult, setShowResult] = useState(false);
+const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
+  const [translations, setTranslations] = useState<Translation[]>([]);
   const [targetLanguage, setTargetLanguage] = useState("et");
   const [domain, setDomain] = useState<Domain>("auto");
   const [text, setText] = useState("");
+
+  const currentUser = useAuthentication();
+
+  const fetchTranslations = () => {
+    if (currentUser) {
+      firestore.getItem(currentUser?.uid).then((querySnapshot) => {
+        const translations_: Translation[] = [];
+        querySnapshot.forEach((doc) => {
+          translations_.push(doc.data() as Translation);
+        });
+
+        setTranslations(translations_);
+      });
+    }
+  };
 
   const translateText = (
     text_ = text,
     target = targetLanguage,
     domain_ = domain
   ) => {
+    if (!text_) {
+      return;
+    }
+
     translate({ text: text_, tgt: target, domain: domain_ }).then(
       (response) => {
         setText(response.result);
+        if (currentUser) {
+          const translation_: Translation = {
+            from: text_,
+            to: response.result,
+            favorite: false,
+            timestamp: dayjs().unix(),
+            userId: currentUser?.uid,
+          };
+          setTranslations((state) => [translation_, ...state]);
+
+          firestore.saveItem(translation_);
+        }
       }
     );
   };
@@ -79,6 +116,25 @@ export default function Home() {
     translateText(text, target_);
   };
 
+  useEffect(() => {
+    fetchTranslations();
+  }, []);
+
+  useEffect(() => {
+    const onFocus = () => {
+      fetchTranslations();
+    };
+
+    navigation.addListener("focus", onFocus);
+
+    return () => {
+      navigation.removeListener("focus", onFocus);
+    };
+  }, [currentUser]);
+
+  const textStyle = { color: "white", fontWeight: "500" } as const;
+  const pickerStyle = { inputIOS: textStyle, inputAndroid: textStyle } as const;
+
   return (
     <View style={styles.container} onTouchStart={Keyboard.dismiss}>
       <StyledTextArea
@@ -88,10 +144,6 @@ export default function Home() {
         multiline
         numberOfLines={5}
         onChangeText={debouncedTranslateText}
-        onFocus={() => setShowResult(true)}
-        onBlur={() => {
-          setShowResult(false);
-        }}
         maxLength={7000}
       />
 
@@ -100,9 +152,10 @@ export default function Home() {
       </StyledResult>
 
       <StyledSection>
-        <Button>
+        <Button style={{ marginRight: 10 }}>
           <RNPickerSelect
             onValueChange={handleTargetChange}
+            style={pickerStyle}
             value={targetLanguage}
             placeholder={{}}
             items={[
@@ -120,6 +173,7 @@ export default function Home() {
         <Button>
           <RNPickerSelect
             onValueChange={setDomain}
+            style={pickerStyle}
             value={domain}
             placeholder={{}}
             items={[
@@ -131,15 +185,10 @@ export default function Home() {
         </Button>
       </StyledSection>
 
-      <HistoryList
-        translations={[
-          { from: "hello", to: "more" },
-          { from: "hello", to: "more" },
-        ]}
-      />
+      <HistoryList translations={translations} />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -155,3 +204,5 @@ const styles = StyleSheet.create({
     width: "80%",
   },
 });
+
+export default Home;

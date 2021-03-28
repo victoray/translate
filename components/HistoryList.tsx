@@ -24,7 +24,7 @@ const StyledContainer = styled.View`
   align-items: center;
 `;
 
-export const StyledHistoryItem = styled.View`
+export const StyledHistoryItem = styled.TouchableOpacity`
   padding: 8px;
   border: 1px solid #eee;
   border-left-width: 0;
@@ -55,8 +55,8 @@ const HistoryList: FC<{
           data={translations}
           renderItem={({ item, index }) => (
             <StyledHistoryItem key={index}>
-              <StyledText>{item.from}</StyledText>
-              <StyledText>{item.to}</StyledText>
+              <StyledText numberOfLines={1}>{item.from}</StyledText>
+              <StyledText numberOfLines={1}>{item.to}</StyledText>
             </StyledHistoryItem>
           )}
         />
