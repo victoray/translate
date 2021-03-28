@@ -9,18 +9,23 @@ class Firestore {
   }
 
   getItem(
-    userId: string
+    userId: string,
+    favorites?: boolean
   ): Promise<
     firebase.firestore.QuerySnapshot<firebase.firestore.DocumentData>
   > {
     const app = firebase.app(FIREBASE_APP);
 
-    return firebase
+    let query = firebase
       .firestore(app)
       .collection(this.key)
-      .where("userId", "==", userId)
-      .orderBy("timestamp", "desc")
-      .get();
+      .where("userId", "==", userId);
+
+    if (favorites !== undefined) {
+      query = query.where("favorite", "==", favorites);
+    }
+
+    return query.orderBy("timestamp", "desc").get();
   }
 
   saveItem(value: Record<string, unknown>): Promise<unknown> {

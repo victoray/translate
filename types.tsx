@@ -17,6 +17,7 @@ export type FavoritesParamList = {
 };
 
 export type Translation = {
+  id: string;
   from: string;
   to: string;
   favorite: boolean;

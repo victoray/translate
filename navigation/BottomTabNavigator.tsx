@@ -9,8 +9,8 @@ import Home from "../screens/Home";
 import Favorites from "../screens/Favorites";
 import {
   BottomTabParamList,
-  HomeParamList,
   FavoritesParamList,
+  HomeParamList,
 } from "../types";
 
 const BottomTab = createBottomTabNavigator<BottomTabParamList>();
@@ -64,7 +64,11 @@ function HomeNavigator() {
       <HomeStack.Screen
         name="HomeScreen"
         component={Home}
-        options={{ headerTitle: "Translate" }}
+        options={{
+          headerTitle: "Translate",
+          headerStyle: { backgroundColor: "#1890ff" },
+          headerTintColor: "#fff",
+        }}
       />
     </HomeStack.Navigator>
   );
@@ -78,7 +82,11 @@ function FavoritesNavigator() {
       <TabTwoStack.Screen
         name="FavoritesScreen"
         component={Favorites}
-        options={{ headerTitle: "Favorites" }}
+        options={{
+          headerTitle: "Favorites",
+          headerStyle: { backgroundColor: "#1890ff" },
+          headerTintColor: "#fff",
+        }}
       />
     </TabTwoStack.Navigator>
   );

@@ -9,6 +9,7 @@ const StyledView = styled.View`
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: #eee;
 `;
 
 const StyledText = styled.Text`
@@ -22,6 +23,9 @@ const StyledContainer = styled.View`
   width: 95%;
   margin-top: 25px;
   align-items: center;
+  background-color: #fff;
+  border-top-right-radius: 10px;
+  border-top-left-radius: 10px;
 `;
 
 export const StyledHistoryItem = styled.TouchableOpacity`
@@ -45,7 +49,8 @@ const styles = StyleSheet.create({
 
 const HistoryList: FC<{
   translations: Translation[];
-}> = ({ translations }) => {
+  onSelect(translation: Translation): void;
+}> = ({ translations, onSelect }) => {
   return (
     <StyledView>
       <StyledContainer>
@@ -54,7 +59,7 @@ const HistoryList: FC<{
           keyExtractor={(_, index) => String(index)}
           data={translations}
           renderItem={({ item, index }) => (
-            <StyledHistoryItem key={index}>
+            <StyledHistoryItem key={index} onPress={() => onSelect(item)}>
               <StyledText numberOfLines={1}>{item.from}</StyledText>
               <StyledText numberOfLines={1}>{item.to}</StyledText>
             </StyledHistoryItem>

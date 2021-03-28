@@ -20,6 +20,7 @@
     "@types/lodash": "^4.14.168",
     "@types/styled-components": "^5.1.7",
     "@types/styled-components-react-native": "^5.1.1",
+    "@types/uuid": "^8.3.0",
     "axios": "^0.21.1",
     "dayjs": "^1.10.4",
     "expo": "~40.0.0",
@@ -35,12 +36,15 @@
     "react": "16.13.1",
     "react-dom": "16.13.1",
     "react-native": "https://github.com/expo/react-native/archive/sdk-40.0.1.tar.gz",
+    "react-native-elements": "^3.3.2",
     "react-native-gesture-handler": "~1.8.0",
+    "react-native-get-random-values": "^1.6.0",
     "react-native-picker-select": "^8.0.4",
     "react-native-safe-area-context": "3.1.9",
     "react-native-screens": "~2.15.0",
     "react-native-web": "~0.13.12",
-    "styled-components": "^5.2.1"
+    "styled-components": "^5.2.1",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@babel/core": "^7.9.0",

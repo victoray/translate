@@ -1,5 +1,5 @@
 import * as React from "react";
-import { FC, useEffect, useState } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 import { Keyboard, StyleSheet, TouchableOpacity } from "react-native";
 import { Text, View } from "../components/Themed";
 import styled from "styled-components/native";
@@ -12,12 +12,13 @@ import firestore from "../storage/firestore";
 import useAuthentication from "../hooks/useAuthentication";
 import { StackNavigationProp } from "@react-navigation/stack";
 import dayjs from "dayjs";
+import "react-native-get-random-values";
+import { v4 as uuidv4 } from "uuid";
 
 const StyledSection = styled.View`
   display: flex;
   border: 1px solid #eee;
   height: 64px;
-  width: 100%;
   flex-direction: row;
   justify-content: space-between;
   padding: 10px;
@@ -26,8 +27,11 @@ const StyledSection = styled.View`
 const StyledResult = styled.ScrollView`
   display: flex;
   border: 1px solid #eee;
-  max-height: 100px;
+  height: 100px;
   padding: 10px;
+  background-color: white;
+  border-bottom-right-radius: 10px;
+  border-bottom-left-radius: 10px;
 `;
 
 const StyledButton = styled.TouchableOpacity`
@@ -43,8 +47,10 @@ const StyledTextArea = styled.TextInput`
   height: 150px;
   border: 1px solid #eee;
   padding: 10px 15px;
-  width: 100%;
   flex-wrap: wrap;
+  background-color: white;
+  border-top-right-radius: 10px;
+  border-top-left-radius: 10px;
 `;
 
 const StyledHistoryView = styled.View`
@@ -64,7 +70,8 @@ const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [targetLanguage, setTargetLanguage] = useState("et");
   const [domain, setDomain] = useState<Domain>("auto");
-  const [text, setText] = useState("");
+  const [result, setResult] = useState("");
+  const [value, setValue] = useState("");
 
   const currentUser = useAuthentication();
 
@@ -82,7 +89,7 @@ const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
   };
 
   const translateText = (
-    text_ = text,
+    text_ = result,
     target = targetLanguage,
     domain_ = domain
   ) => {
@@ -92,28 +99,30 @@ const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
 
     translate({ text: text_, tgt: target, domain: domain_ }).then(
       (response) => {
-        setText(response.result);
+        setResult(response.result);
         if (currentUser) {
           const translation_: Translation = {
+            id: uuidv4(),
             from: text_,
             to: response.result,
             favorite: false,
             timestamp: dayjs().unix(),
             userId: currentUser?.uid,
           };
-          setTranslations((state) => [translation_, ...state]);
 
-          firestore.saveItem(translation_);
+          firestore.saveItem(translation_).then(() => {
+            setTranslations((state) => [translation_, ...state]);
+          });
         }
       }
     );
   };
 
-  const debouncedTranslateText = debounce(translateText, 750);
+  const debouncedTranslateText = useCallback(debounce(translateText, 750), []);
 
   const handleTargetChange = (target_: string) => {
     setTargetLanguage(target_);
-    translateText(text, target_);
+    translateText(result, target_);
   };
 
   useEffect(() => {
@@ -137,19 +146,25 @@ const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
 
   return (
     <View style={styles.container} onTouchStart={Keyboard.dismiss}>
-      <StyledTextArea
-        placeholder={
-          "We can automatically translate Estonian, Latvian, Lithuanian, English, Finnish, German and Russian. Write your text here!"
-        }
-        multiline
-        numberOfLines={5}
-        onChangeText={debouncedTranslateText}
-        maxLength={7000}
-      />
+      <View style={styles.shadow}>
+        <StyledTextArea
+          placeholder={
+            "We can automatically translate Estonian, Latvian, Lithuanian, English, Finnish, German and Russian. Write your text here!"
+          }
+          multiline
+          numberOfLines={5}
+          onChangeText={(text_) => {
+            setValue(text_);
+            debouncedTranslateText(text_);
+          }}
+          value={value}
+          maxLength={7000}
+        />
 
-      <StyledResult onTouchStart={(e) => e.stopPropagation()}>
-        <Text>{text}</Text>
-      </StyledResult>
+        <StyledResult onTouchStart={(e) => e.stopPropagation()}>
+          <Text>{result}</Text>
+        </StyledResult>
+      </View>
 
       <StyledSection>
         <Button style={{ marginRight: 10 }}>
@@ -185,7 +200,13 @@ const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
         </Button>
       </StyledSection>
 
-      <HistoryList translations={translations} />
+      <HistoryList
+        translations={translations}
+        onSelect={(translation) => {
+          setResult(translation.to);
+          setValue(translation.from);
+        }}
+      />
     </View>
   );
 };
@@ -193,6 +214,10 @@ const Home: FC<{ navigation: StackNavigationProp<any> }> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#eee",
+    paddingTop: 8,
   },
   title: {
     fontSize: 20,
@@ -202,6 +227,19 @@ const styles = StyleSheet.create({
     marginVertical: 30,
     height: 1,
     width: "80%",
+  },
+  shadow: {
+    width: "95%",
+    borderRadius: 10,
+    shadowColor: "#eee",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 1.0,
+
+    elevation: 1,
   },
 });
 
