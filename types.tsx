@@ -20,3 +20,5 @@ export type Translation = {
   from: string;
   to: string;
 };
+
+export type Domain = "auto" | "fml" | "inf";

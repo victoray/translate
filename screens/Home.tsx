@@ -3,8 +3,12 @@ import { FlatList, Keyboard, Pressable, StyleSheet } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
 import { Text, View } from "../components/Themed";
 import styled from "styled-components/native";
-import { FC, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import HistoryList, { StyledHistoryItem } from "../components/HistoryList";
+import RNPickerSelect from "react-native-picker-select";
+import { debounce } from "lodash";
+import { translate } from "../api";
+import { Domain } from "../types";
 
 const StyledSection = styled.View`
   display: flex;
@@ -34,6 +38,7 @@ const StyledTextArea = styled.TextInput`
   border: 1px solid #eee;
   padding: 10px 15px;
   width: 100%;
+  flex-wrap: wrap;
 `;
 
 const StyledHistoryView = styled.View`
@@ -51,76 +56,87 @@ const Button: FC = ({ children }) => {
 
 export default function Home() {
   const [showResult, setShowResult] = useState(false);
+  const [targetLanguage, setTargetLanguage] = useState("et");
+  const [domain, setDomain] = useState<Domain>("auto");
+  const [text, setText] = useState("");
+
+  const translateText = (
+    text_ = text,
+    target = targetLanguage,
+    domain_ = domain
+  ) => {
+    translate({ text: text_, tgt: target, domain: domain_ }).then(
+      (response) => {
+        setText(response.result);
+      }
+    );
+  };
+
+  const debouncedTranslateText = debounce(translateText, 750);
+
+  const handleTargetChange = (target_: string) => {
+    setTargetLanguage(target_);
+    translateText(text, target_);
+  };
 
   return (
     <View style={styles.container} onTouchStart={Keyboard.dismiss}>
-      <StyledSection>
-        <Button>English</Button>
-        <Button>
-          <AntDesign name="swap" size={18} color="black" />
-        </Button>
-        <Button>Estonian</Button>
-      </StyledSection>
-
       <StyledTextArea
-        placeholder={"Enter a text"}
+        placeholder={
+          "We can automatically translate Estonian, Latvian, Lithuanian, English, Finnish, German and Russian. Write your text here!"
+        }
         multiline
         numberOfLines={5}
+        onChangeText={debouncedTranslateText}
         onFocus={() => setShowResult(true)}
         onBlur={() => {
           setShowResult(false);
         }}
+        maxLength={7000}
       />
 
-      {showResult ? (
-        <StyledResult onTouchStart={(e) => e.stopPropagation()}>
-          <Text>
-            I came across a very interesting position on your jobs page and I
-            believe it fits me perfectly. I am interested in applying for the
-            position of Frontend Software Engineer. I believe my positive drive
-            to learn and passion for creative solutions will be a positive
-            addition to your team and organization’s goals. I enjoy innovation
-            and love to experiment with different ideas. I love coding and
-            numbers in general, I have cultivated a habit of learning through
-            practice and diverse experiences. I have a deep passion for new
-            advancements in technology. These talents, along with my passion in
-            this field, align with the qualities you desire in this position. I
-            think I will excel in a workplace that promotes a culture of fun,
-            consensus-driven, and high-energy teamwork. I have a good knowledge
-            of Python, Javascript, Java, React, TypeScript and SQL and I can
-            work efficiently with Unix systems and Windows.  I am highly
-            motivated by the prospects of learning and providing solutions on a
-            daily basis. I have an artistic eye and strong work ethic, but also
-            like to foster an element of fun. I strongly believe that my
-            creative talents will prove to be a valuable resource for your
-            organization. I look forward to an opportunity to grow with your
-            organization.
-          </Text>
-        </StyledResult>
-      ) : (
-        <HistoryList
-          translations={[
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hello", to: "more" },
-            { from: "hellttto", to: "more" },
-          ]}
-        />
-      )}
+      <StyledResult onTouchStart={(e) => e.stopPropagation()}>
+        <Text>{text}</Text>
+      </StyledResult>
+
+      <StyledSection>
+        <Button>
+          <RNPickerSelect
+            onValueChange={handleTargetChange}
+            value={targetLanguage}
+            placeholder={{}}
+            items={[
+              { label: "Estonian", value: "et" },
+              { label: "English", value: "en" },
+              { label: "Latvian", value: "lv" },
+              { label: "Lithuanian", value: "lt" },
+              { label: "Finnish", value: "fi" },
+              { label: "German", value: "de" },
+              { label: "Russian", value: "ru" },
+            ]}
+          />
+        </Button>
+
+        <Button>
+          <RNPickerSelect
+            onValueChange={setDomain}
+            value={domain}
+            placeholder={{}}
+            items={[
+              { label: "Auto", value: "auto" },
+              { label: "Formal", value: "fml" },
+              { label: "Informal", value: "inf" },
+            ]}
+          />
+        </Button>
+      </StyledSection>
+
+      <HistoryList
+        translations={[
+          { from: "hello", to: "more" },
+          { from: "hello", to: "more" },
+        ]}
+      />
     </View>
   );
 }
