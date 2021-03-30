@@ -66,6 +66,7 @@ const StyledHistoryView = styled.View`
 
 const Button: FC<TouchableOpacity["props"]> = ({ children, ...props }) => {
   return (
+    // @ts-ignore
     <StyledButton {...props}>
       <Text style={{ color: "white" }}>{children}</Text>
     </StyledButton>
