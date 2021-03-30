@@ -59,9 +59,9 @@ const StyledTextArea = styled.TextInput`
   border-top-left-radius: 10px;
 `;
 
-const StyledHistoryView = styled.View`
-  flex: 1;
-  background-color: #eee;
+const StyledActivityIndicator = styled.ActivityIndicator`
+  position: absolute;
+  right: 0;
 `;
 
 const Button: FC<TouchableOpacity["props"]> = ({ children, ...props }) => {
@@ -73,16 +73,27 @@ const Button: FC<TouchableOpacity["props"]> = ({ children, ...props }) => {
   );
 };
 
+const useTranslate = () => {
+  const [loading, setLoading] = useState();
+  const fetchTranslation = (text: string, tgt: string, domain: Domain) => {
+    setLoading(true);
+    return translate({ text, tgt, domain }).finally(() => setLoading(false));
+  };
+
+  return { loading, fetchTranslation };
+};
+
 const Home: FC<{ navigation: StackNavigationProp<any>; route: Route }> = ({
   route,
 }) => {
   const [targetLanguage, setTargetLanguage] = useState("et");
   const [domain, setDomain] = useState<Domain>("auto");
   const [result, setResult] = useState("");
-  const [value, setValue] = useState("");
+  const [text, setText] = useState("");
 
   const currentUser = useAuthentication();
   const { from, to, target, domain: domain_ } = route.params || {};
+  const { loading, fetchTranslation } = useTranslate();
 
   useEffect(() => {
     if ([from, to, target, domain_].every((v) => v)) {
@@ -90,13 +101,13 @@ const Home: FC<{ navigation: StackNavigationProp<any>; route: Route }> = ({
         setTargetLanguage(target);
         setDomain(domain_);
         setResult(to);
-        setValue(from);
+        setText(from);
       });
     }
   }, [from, to, target, domain_]);
 
   const translateText = (
-    text_ = result,
+    text_ = text,
     target = targetLanguage,
     domain_ = domain
   ) => {
@@ -104,7 +115,7 @@ const Home: FC<{ navigation: StackNavigationProp<any>; route: Route }> = ({
       return;
     }
 
-    translate({ text: text_, tgt: target, domain: domain_ })
+    fetchTranslation(text_, target, domain_)
       .then((response) => {
         setResult(response.result);
         if (currentUser) {
@@ -129,12 +140,12 @@ const Home: FC<{ navigation: StackNavigationProp<any>; route: Route }> = ({
 
   const handleTargetChange = (target_: string) => {
     setTargetLanguage(target_);
-    debouncedTranslateText(value, target_);
+    debouncedTranslateText(text, target_);
   };
 
   const handleDomainChange = (domain_: Domain) => {
     setDomain(domain_);
-    debouncedTranslateText(value, target, domain_);
+    debouncedTranslateText(text, target, domain_);
   };
 
   const textStyle = { color: "white", fontWeight: "500" } as const;
@@ -150,14 +161,15 @@ const Home: FC<{ navigation: StackNavigationProp<any>; route: Route }> = ({
           multiline
           numberOfLines={5}
           onChangeText={(text_) => {
-            setValue(text_);
+            setText(text_);
             debouncedTranslateText(text_);
           }}
-          value={value}
+          value={text}
           maxLength={7000}
         />
 
         <StyledResult onTouchStart={(e) => e.stopPropagation()}>
+          {loading && <StyledActivityIndicator />}
           <Text>{result}</Text>
         </StyledResult>
       </View>
@@ -199,7 +211,7 @@ const Home: FC<{ navigation: StackNavigationProp<any>; route: Route }> = ({
       <HistoryList
         onSelect={(translation) => {
           setResult(translation.to);
-          setValue(translation.from);
+          setText(translation.from);
         }}
       />
     </View>
